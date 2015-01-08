@@ -156,29 +156,26 @@ void get_flags( int *argc, char **argv )
 char *next_token( int sockfd )
 
 {
-  static char buffer[10000];
-  static int pos = 0;
-  static int last = 0;
-  vector<char> token;
+  char buffer[10000];
+  int pos = 0;
+  int result = 0;
+  int length = 0;
 
-  for(;;) {
-    while (pos < last) {
-      token.push_back(buffer[pos]);
-      if (buffer[pos++] == '\n') {
-	token.back() = 0;
-	return strdup(&token[0]);
+  while (true) {
+    result = (int)read( sockfd, buffer, 10000 );
+    if (result <= 0) break;
+    length += result;
+
+    while (pos < length) {
+      if (buffer[pos] == '\n') {
+        buffer[pos] = '\0';
+        return strdup(buffer);
       }
-    }
-    pos = 0;
-    last = (int)read( sockfd, buffer, 10000 );
-    if (last <= 0) {
-      if (token.size() > 0) {
-	token.push_back(0);
-	return strdup(&token[0]);
-      }
-      return NULL;
+      pos++;
     }
   }
+
+  return NULL;
 }
 
 
@@ -194,7 +191,7 @@ void annotate_data( int sockfd )
   char *word;
   vector<CAnalysis> analyses;
   char buffer[10000];
-  while ((word = next_token( sockfd )) != NULL) {
+  if ((word = next_token( sockfd )) != NULL) {
     sprintf(buffer, "> %s\n", word);
     write( sockfd, buffer, strlen(buffer) );
     
